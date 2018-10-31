@@ -109,7 +109,7 @@ function getEmitter() {
                 emittedEvent.forEach(function (key, value) {
                     for (let x of key.handlers) {
                         key.currentCount += 1;
-                        if (key.currentCount - 1 > key.maxCount ||
+                        if (key.currentCount - 1 >= key.maxCount ||
                             (key.currentCount % key.through !== 1 && key.through !== 1)) {
                             break;
                         }
