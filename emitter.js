@@ -22,11 +22,11 @@ class SubscribeParticipantData {
 */
 
 class SubscriberData {
-    constructor(handler, currentCount, maxCount, through) {
+    constructor(handler, optionalParams) {
         this.handlers = [handler];
         this.currentCount = 0;
-        this.maxCount = maxCount;
-        this.through = through;
+        this.maxCount = optionalParams.maxCount;
+        this.through = optionalParams.through;
     }
 }
 
@@ -37,15 +37,23 @@ function getAllEvents(event) {
     for (let i = 0; i < currentEvents.length; i++) {
         if (i === 0) {
             currentEvent = currentEvents[i];
-            result.push(currentEvent);
         } else {
             currentEvent = `${currentEvent}.${currentEvents[i]}`;
-            result.push(currentEvent);
         }
+        result.push(currentEvent);
 
     }
 
     return result.reverse();
+}
+function mustSubscribe(subscriberData) {
+    return !(subscriberData.currentCount - 1 >= subscriberData.maxCount ||
+        (subscriberData.currentCount % subscriberData.through !== 1 &&
+            subscriberData.through !== 1));
+}
+
+function createOptionalParams(maxCount, through) {
+    return { maxCount, through };
 }
 
 function getEmitter() {
@@ -54,20 +62,16 @@ function getEmitter() {
     return {
 
 
-        on: function (event, context, handler,
-            intervalData = { 'maxCount': Infinity, 'through': 1 }) {
-            // console.info(event, context, handler);
+        on: function (event, context, handler, options = createOptionalParams(Infinity, 1)) {
             if (events.has(event)) {
                 const currentEventData = events.get(event);
                 if (currentEventData.has(context)) {
                     currentEventData.get(context).handlers.push(handler);
                 } else {
-                    currentEventData.set(context, new SubscriberData(handler, 0,
-                        intervalData.maxCount, intervalData.through));
+                    currentEventData.set(context, new SubscriberData(handler, options));
                 }
             } else {
-                const eventMap = new Map([[context, new SubscriberData(handler, 0,
-                    intervalData.maxCount, intervalData.through)]]);
+                const eventMap = new Map([[context, new SubscriberData(handler, options)]]);
                 events.set(event, eventMap);
             }
 
@@ -110,14 +114,13 @@ function getEmitter() {
                     continue;
                 }
                 const emittedEvent = events.get(currEvent);
-                emittedEvent.forEach(function (key, value) {
-                    for (let x of key.handlers) {
-                        key.currentCount += 1;
-                        if (key.currentCount - 1 >= key.maxCount ||
-                            (key.currentCount % key.through !== 1 && key.through !== 1)) {
+                emittedEvent.forEach(function (subscriberData, subscriber) {
+                    for (let handler of subscriberData.handlers) {
+                        subscriberData.currentCount += 1;
+                        if (!mustSubscribe(subscriberData)) {
                             break;
                         }
-                        x.call(value);
+                        handler.call(subscriber);
                     }
 
                 });
@@ -136,7 +139,7 @@ function getEmitter() {
          * @returns {Object}
          */
         several: function (event, context, handler, times) {
-            this.on(event, context, handler, { 'maxCount': times, 'through': 1 });
+            this.on(event, context, handler, createOptionalParams(times, 1));
 
             return this;
         },
@@ -151,7 +154,7 @@ function getEmitter() {
          * @returns {Object}
          */
         through: function (event, context, handler, frequency) {
-            this.on(event, context, handler, { 'maxCount': Infinity, 'through': frequency });
+            this.on(event, context, handler, createOptionalParams(Infinity, frequency));
 
             return this;
         }
