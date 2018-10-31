@@ -81,14 +81,18 @@ function getEmitter() {
          * @returns {Object}
          */
         off: function (event, context) {
-            if (!events.has(event)) {
-                return this;
+            const eventToDelete = [...events.keys()]
+                .filter(x => x === event || x.startsWith(event + '.'));
+            for (let currEvent of eventToDelete) {
+                if (!events.has(currEvent)) {
+                    return this;
+                }
+                const eventMap = events.get(currEvent);
+                if (!eventMap.has(context)) {
+                    return this;
+                }
+                eventMap.delete(context);
             }
-            const eventMap = events.get(event);
-            if (!eventMap.has(context)) {
-                return this;
-            }
-            eventMap.delete(context);
 
 
             return this;
@@ -132,7 +136,6 @@ function getEmitter() {
          * @returns {Object}
          */
         several: function (event, context, handler, times) {
-            console.info(event, context, handler, times);
             this.on(event, context, handler, { 'maxCount': times, 'through': 1 });
 
             return this;
@@ -148,7 +151,6 @@ function getEmitter() {
          * @returns {Object}
          */
         through: function (event, context, handler, frequency) {
-            console.info(event, context, handler, frequency);
             this.on(event, context, handler, { 'maxCount': Infinity, 'through': frequency });
 
             return this;
