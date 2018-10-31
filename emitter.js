@@ -21,6 +21,15 @@ class SubscribeParticipantData {
 }
 */
 
+class SubscriberData {
+    constructor(handler, currentCount, maxCount, through) {
+        this.handlers = [handler];
+        this.currentCount = 0;
+        this.maxCount = maxCount;
+        this.through = through;
+    }
+}
+
 function getAllEvents(event) {
     const currentEvents = event.split('.');
     const result = [];
@@ -41,28 +50,24 @@ function getAllEvents(event) {
 
 function getEmitter() {
     const events = new Map();
-    const eventsCount = new Map();
 
     return {
 
-        /**
-         * Подписаться на событие
-         * @param {String} event
-         * @param {Object} context
-         * @param {Function} handler
-         * @returns {Object}
-         */
-        on: function (event, context, handler) {
+
+        on: function (event, context, handler,
+            intervalData = { 'maxCount': Infinity, 'through': 1 }) {
             // console.info(event, context, handler);
             if (events.has(event)) {
                 const currentEventData = events.get(event);
                 if (currentEventData.has(context)) {
-                    currentEventData.get(context).push(handler);
+                    currentEventData.get(context).handlers.push(handler);
                 } else {
-                    currentEventData.set(context, [handler]);
+                    currentEventData.set(context, new SubscriberData(handler, 0,
+                        intervalData.maxCount, intervalData.through));
                 }
             } else {
-                const eventMap = new Map([[context, [handler]]]);
+                const eventMap = new Map([[context, new SubscriberData(handler, 0,
+                    intervalData.maxCount, intervalData.through)]]);
                 events.set(event, eventMap);
             }
 
@@ -100,14 +105,14 @@ function getEmitter() {
                 if (!events.has(currEvent)) {
                     continue;
                 }
-                if (eventsCount.has(currEvent)) {
-                    eventsCount.set(currEvent, eventsCount.get(currEvent) + 1);
-                } else {
-                    eventsCount.set(currEvent, 1);
-                }
                 const emittedEvent = events.get(currEvent);
                 emittedEvent.forEach(function (key, value) {
-                    for (let x of key) {
+                    for (let x of key.handlers) {
+                        key.currentCount += 1;
+                        if (key.currentCount - 1 > key.maxCount ||
+                            (key.currentCount % key.through !== 1 && key.through !== 1)) {
+                            break;
+                        }
                         x.call(value);
                     }
 
@@ -128,6 +133,7 @@ function getEmitter() {
          */
         several: function (event, context, handler, times) {
             console.info(event, context, handler, times);
+            this.on(event, context, handler, { 'maxCount': times, 'through': 1 });
 
             return this;
         },
@@ -143,6 +149,7 @@ function getEmitter() {
          */
         through: function (event, context, handler, frequency) {
             console.info(event, context, handler, frequency);
+            this.on(event, context, handler, { 'maxCount': Infinity, 'through': frequency });
 
             return this;
         }
