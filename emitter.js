@@ -21,6 +21,11 @@ class SubscriberData {
     }
 }
 
+/**
+ * Получить события из заданного пространства имен
+ * @param {String} namespace
+ * @returns {Array}
+ */
 function getEventNames(namespace) {
     const currentNamespaces = namespace.split('.');
     const result = [];
@@ -38,12 +43,24 @@ function getEventNames(namespace) {
     return result.reverse();
 }
 
+/**
+ * Определить, нужно ли подписываться на событие с номером currentCount
+ * при заданных для контекста maxCount и through
+ * @param {Object} params
+ * @returns {Boolean}
+ */
 function mustSubscribe({ currentCount, maxCount, through }) {
     return !(currentCount - 1 >= maxCount ||
         (currentCount % through !== 1 &&
             through !== 1));
 }
 
+/**
+ * Получить объект опциональных параметров - maxCount и through
+ * @param {Number} maxCount
+ * @param {Number} through
+ * @returns {Object}
+ */
 function createOptionalParams(maxCount, through) {
     return { maxCount, through };
 }
@@ -80,16 +97,12 @@ function getEmitter() {
             const eventToDelete = [...events.keys()]
                 .filter(x => x === event || x.startsWith(event + '.'));
             for (let currEvent of eventToDelete) {
-                if (!events.has(currEvent)) {
+                const contextToHandler = events.get(currEvent);
+                if (!contextToHandler.has(context)) {
                     return this;
                 }
-                const eventMap = events.get(currEvent);
-                if (!eventMap.has(context)) {
-                    return this;
-                }
-                eventMap.delete(context);
+                contextToHandler.delete(context);
             }
-
 
             return this;
         },
