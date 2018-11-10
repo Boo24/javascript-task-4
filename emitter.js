@@ -11,15 +11,6 @@ const isStar = true;
  * @returns {Object}
  */
 
-/**
-class SubscribeParticipantData {
-    constructor(context, handler) {
-        this.context = context;
-        this.handlers = [handler];
-    }
-
-}
-*/
 
 class SubscriberData {
     constructor(handler, optionalParams) {
@@ -30,26 +21,27 @@ class SubscriberData {
     }
 }
 
-function getAllEvents(event) {
-    const currentEvents = event.split('.');
+function getEventNames(namespace) {
+    const currentNamespaces = namespace.split('.');
     const result = [];
-    let currentEvent = '';
-    for (let i = 0; i < currentEvents.length; i++) {
+    let currentNamespace = '';
+    for (let i = 0; i < currentNamespaces.length; i++) {
         if (i === 0) {
-            currentEvent = currentEvents[i];
+            currentNamespace = currentNamespaces[i];
         } else {
-            currentEvent = `${currentEvent}.${currentEvents[i]}`;
+            currentNamespace = `${currentNamespace}.${currentNamespaces[i]}`;
         }
-        result.push(currentEvent);
+        result.push(currentNamespace);
 
     }
 
     return result.reverse();
 }
-function mustSubscribe(subscriberData) {
-    return !(subscriberData.currentCount - 1 >= subscriberData.maxCount ||
-        (subscriberData.currentCount % subscriberData.through !== 1 &&
-            subscriberData.through !== 1));
+
+function mustSubscribe({ currentCount, maxCount, through }) {
+    return !(currentCount - 1 >= maxCount ||
+        (currentCount % through !== 1 &&
+            through !== 1));
 }
 
 function createOptionalParams(maxCount, through) {
@@ -108,7 +100,7 @@ function getEmitter() {
          * @returns {Object}
          */
         emit: function (event) {
-            const currentEvents = getAllEvents(event);
+            const currentEvents = getEventNames(event);
             for (const currEvent of currentEvents) {
                 if (!events.has(currEvent)) {
                     continue;
